@@ -1,10 +1,14 @@
-import express from "express";
+import express, { json } from "express";
+import AuthRouter from "./routes/auth";
 
 const app = express();
+app.use(json());
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+
+app.use("/api/auth", AuthRouter);
 
 app.listen(process.env.PORT || 3000, () => {
   console.log(
