@@ -10,10 +10,12 @@ router.post("/login", validateData(loginUserSchema), Controller.login);
 
 router.post("/register", validateData(createUserSchema), Controller.register);
 
-router.get("/logout", Controller.logout);
+router.post("/logout", Controller.logout);
 
 router.post("/refresh", Controller.refresh);
 
 router.get("/test", verifyToken, Controller.test);
+
+router.get("/me", verifyToken, Controller.me);
 
 export default router;
