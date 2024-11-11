@@ -5,7 +5,7 @@ import {
   usersTable,
 } from "../db/schema/users";
 import { db } from "../db";
-import bcrypt from "bcryptjs";
+import * as argon from "argon2";
 import { eq } from "drizzle-orm";
 import { refreshTokensTable } from "../db/schema/refreshTokens";
 import { generateToken } from "../utils/generateToken";
@@ -29,10 +29,7 @@ export default {
         throw new AuthError(401, "Authentication failed");
       }
 
-      const isPasswordValid = await bcrypt.compare(
-        data.password,
-        user.password
-      );
+      const isPasswordValid = await argon.verify(user.password, data.password);
 
       if (!isPasswordValid) {
         throw new AuthError(401, "Authentication failed");
@@ -50,7 +47,7 @@ export default {
         type: TOKENS.REFRESH_TOKEN,
       });
 
-      const hashedToken = await bcrypt.hash(refreshToken, 10);
+      const hashedToken = await argon.hash(refreshToken);
 
       // Delete any existing refresh tokens for this user
       await db
@@ -99,7 +96,7 @@ export default {
         throw new AuthError(400, "Password must be at least 8 characters");
       }
 
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const hashedPassword = await argon.hash(data.password);
 
       const [user] = await db
         .insert(usersTable)
@@ -190,9 +187,9 @@ export default {
         throw new AuthError(401, "Invalid refresh token");
       }
 
-      const isTokenValid = await bcrypt.compare(
-        refreshToken,
-        refreshTokenData.hashedToken
+      const isTokenValid = await argon.verify(
+        refreshTokenData.hashedToken,
+        refreshToken
       );
 
       if (!isTokenValid) {
@@ -208,6 +205,36 @@ export default {
       res.json({
         success: true,
         data: { accessToken },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  me: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = req.headers.authorization?.split(" ")[1];
+
+      if (!token) {
+        throw new AuthError(401, "Unauthorized");
+      }
+
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!);
+
+      const { userId } = jwtValidator.parse(decoded);
+
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.id, userId));
+
+      if (!user) {
+        throw new AuthError(401, "Unauthorized");
+      }
+
+      res.json({
+        success: true,
+        data: { user },
       });
     } catch (error) {
       next(error);
