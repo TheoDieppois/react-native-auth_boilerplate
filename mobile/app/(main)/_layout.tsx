@@ -1,9 +1,13 @@
-import { View, Text } from "react-native";
+import { useAuthContext } from "@/src/components/AuthProvider";
+import { Redirect, Stack } from "expo-router";
 import React from "react";
-import { Tabs } from "expo-router";
 
-const Layout = () => {
-  return <Tabs />;
-};
+export default function RootLayout() {
+  const { user } = useAuthContext();
 
-export default Layout;
+  if (!user) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  return <Stack />;
+}
